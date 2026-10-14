@@ -6,6 +6,11 @@ author: airton-web
 description: Plugin de Multi Economias.
 commands:
   saldo:
-    description: Show your balance.
+    description: Show your balance or give money (admin).
     aliases: [balance, bal]
-    usage: /saldo
+    usage: "/saldo [dar <jogador> <moeda> <valor>]"
+
+permissions:
+  aeconomy.admin:
+    description: Allows giving money to players
+    default: op
