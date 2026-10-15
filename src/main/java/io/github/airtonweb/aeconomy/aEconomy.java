@@ -5,22 +5,31 @@ import org.bukkit.Bukkit;
 import org.bukkit.plugin.ServicePriority;
 import org.bukkit.plugin.java.JavaPlugin;
 
-/**
- * Classe principal do plugin de economia.
- *
- * - O "package" precisa bater com as pastas:
- *   src/main/java/io/github/airtonweb/aeconomy/
- * - O nome desta classe (aEconomy) precisa ser IGUAL, letra por letra,
- *   ao final do campo "main" do plugin.yml.
- */
+import java.io.File;
+import java.sql.SQLException;
+
 public final class aEconomy extends JavaPlugin {
 
-    // CAMPO: fica na classe, fora dos métodos
-    private final EconomyManager economy = new EconomyManager();
+    private Database database;
+    private EconomyManager economy;
 
-    // Chamado quando o servidor liga o plugin
     @Override
     public void onEnable() {
+        // Garante que a pasta plugins/aEconomy existe
+        getDataFolder().mkdirs();
+
+        database = new Database(new File(getDataFolder(), "aEconomy.db"));
+
+        try {
+            database.connect();
+            economy = new EconomyManager(database, getLogger());
+            economy.load();
+        } catch (SQLException e) {
+            getLogger().severe("Não foi possível abrir o banco de dados: " + e.getMessage());
+            getServer().getPluginManager().disablePlugin(this);
+            return;
+        }
+
         // Publica a economia no "quadro de avisos" para outros plugins usarem
         getServer().getServicesManager().register(
                 Economy.class, economy, this, ServicePriority.Normal);
@@ -31,9 +40,11 @@ public final class aEconomy extends JavaPlugin {
         Bukkit.getConsoleSender().sendMessage("§2[aEconomy] §aVersão do Plugin: " + getPluginMeta().getVersion());
     }
 
-    // Chamado quando o servidor desliga o plugin
     @Override
     public void onDisable() {
+        if (database != null) {
+            database.close();
+        }
         Bukkit.getConsoleSender().sendMessage("§4[aEconomy] §cPlugin desligado!");
     }
 }

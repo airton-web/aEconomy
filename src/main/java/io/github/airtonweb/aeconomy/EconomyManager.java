@@ -2,14 +2,29 @@ package io.github.airtonweb.aeconomy;
 
 import io.github.airtonweb.aeconomy.api.Economy;
 
+import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.logging.Logger;
 
 public class EconomyManager implements Economy {
 
-    // moeda -> (jogador -> saldo)
+    // moeda -> (jogador -> saldo): a "cópia rápida" na memória
     private final Map<String, Map<UUID, Double>> balances = new HashMap<>();
+
+    private final Database database;
+    private final Logger logger;
+
+    public EconomyManager(Database database, Logger logger) {
+        this.database = database;
+        this.logger = logger;
+    }
+
+    // Chamado ao ligar o plugin: traz os saldos do banco para a memória
+    public void load() throws SQLException {
+        balances.putAll(database.loadAll());
+    }
 
     @Override
     public double getBalance(UUID playerId, String currency) {
@@ -22,10 +37,17 @@ public class EconomyManager implements Economy {
 
     @Override
     public void addBalance(UUID playerId, String currency, double amount) {
-        // Se ainda não existe a tabela dessa moeda, cria uma vazia
         Map<UUID, Double> currencyBalances =
                 balances.computeIfAbsent(currency, key -> new HashMap<>());
 
-        currencyBalances.put(playerId, currencyBalances.getOrDefault(playerId, 0.0) + amount);
+        double newAmount = currencyBalances.getOrDefault(playerId, 0.0) + amount;
+        currencyBalances.put(playerId, newAmount);
+
+        // Grava no banco
+        try {
+            database.save(playerId, currency, newAmount);
+        } catch (SQLException e) {
+            logger.severe("Erro ao salvar o saldo de " + playerId + ": " + e.getMessage());
+        }
     }
 }

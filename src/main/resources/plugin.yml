@@ -4,6 +4,8 @@ main: io.github.airtonweb.aeconomy.aEconomy
 api-version: '1.21'
 author: airton-web
 description: Plugin de Multi Economias.
+libraries:
+  - org.xerial:sqlite-jdbc:3.49.1.0
 commands:
   saldo:
     description: Show your balance or give money (admin).
