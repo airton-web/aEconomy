@@ -10,7 +10,7 @@ commands:
   saldo:
     description: Show your balance or give money (admin).
     aliases: [balance, bal]
-    usage: "/saldo [dar <jogador> <moeda> <valor>]"
+    usage: "/saldo [dar|remover|setar <jogador> <moeda> <valor>]"
 
 permissions:
   aeconomy.admin:

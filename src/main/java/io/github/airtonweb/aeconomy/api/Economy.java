@@ -9,4 +9,10 @@ public interface Economy {
 
     // Soma um valor ao saldo do jogador nessa moeda
     void addBalance(UUID playerId, String currency, double amount);
+
+    // Define o saldo (substitui o valor atual). Devolve false se não foi possível.
+    boolean setBalance(UUID playerId, String currency, double amount);
+
+    // Tira dinheiro. Devolve false, sem alterar nada, se o saldo for insuficiente.
+    boolean removeBalance(UUID playerId, String currency, double amount);
 }

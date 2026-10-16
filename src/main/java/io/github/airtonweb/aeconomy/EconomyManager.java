@@ -50,4 +50,43 @@ public class EconomyManager implements Economy {
             logger.severe("Erro ao salvar o saldo de " + playerId + ": " + e.getMessage());
         }
     }
+
+    @Override
+    public boolean setBalance(UUID playerId, String currency, double amount) {
+        if (!isValid(amount)) {
+            return false;
+        }
+        return store(playerId, currency, amount);
+    }
+
+    @Override
+    public boolean removeBalance(UUID playerId, String currency, double amount) {
+        if (!isValid(amount) || amount == 0) {
+            return false;
+        }
+
+        double current = getBalance(playerId, currency);
+        if (current < amount) {
+            return false;   // saldo insuficiente
+        }
+        return store(playerId, currency, current - amount);
+    }
+
+    // Número válido: nem NaN, nem infinito, nem negativo
+    private boolean isValid(double amount) {
+        return !Double.isNaN(amount) && !Double.isInfinite(amount) && amount >= 0;
+    }
+
+    // Grava no banco PRIMEIRO; só altera a memória se deu certo
+    private boolean store(UUID playerId, String currency, double newAmount) {
+        try {
+            database.save(playerId, currency, newAmount);
+        } catch (SQLException e) {
+            logger.severe("Erro ao salvar o saldo de " + playerId + ": " + e.getMessage());
+            return false;
+        }
+
+        balances.computeIfAbsent(currency, key -> new HashMap<>()).put(playerId, newAmount);
+        return true;
+    }
 }
