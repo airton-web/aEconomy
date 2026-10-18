@@ -1,5 +1,6 @@
 package io.github.airtonweb.aeconomy.api;
 
+import java.util.Set;
 import java.util.UUID;
 
 public interface Economy {
@@ -15,4 +16,7 @@ public interface Economy {
 
     // Tira dinheiro. Devolve false, sem alterar nada, se o saldo for insuficiente.
     boolean removeBalance(UUID playerId, String currency, double amount);
+
+    // Nomes das moedas que já têm algum saldo registrado
+    Set<String> getCurrencies();
 }

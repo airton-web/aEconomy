@@ -4,7 +4,9 @@ import io.github.airtonweb.aeconomy.api.Economy;
 
 import java.sql.SQLException;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.logging.Logger;
 
@@ -70,6 +72,12 @@ public class EconomyManager implements Economy {
             return false;   // saldo insuficiente
         }
         return store(playerId, currency, current - amount);
+    }
+
+    @Override
+    public Set<String> getCurrencies() {
+        // Devolve uma CÓPIA, para quem chama não mexer no Map por dentro
+        return new HashSet<>(balances.keySet());
     }
 
     // Número válido: nem NaN, nem infinito, nem negativo

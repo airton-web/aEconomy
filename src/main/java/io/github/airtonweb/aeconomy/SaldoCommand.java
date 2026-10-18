@@ -1,13 +1,22 @@
 package io.github.airtonweb.aeconomy;
 
 import io.github.airtonweb.aeconomy.api.Economy;
+import io.github.airtonweb.aeconomy.api.MoneyFormat;
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
+import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
+import org.bukkit.util.StringUtil;
 
-public class SaldoCommand implements CommandExecutor {
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
+
+public class SaldoCommand implements CommandExecutor, TabCompleter {
 
     private final Economy economy;
 
@@ -45,8 +54,49 @@ public class SaldoCommand implements CommandExecutor {
 
         Player player = (Player) sender;
         double balance = economy.getBalance(player.getUniqueId(), "coins");
-        player.sendMessage("§7Seu saldo: §a" + balance + " coins");
+        player.sendMessage("§7Seu saldo: §a" + MoneyFormat.format(balance) + " coins");
         return true;
+    }
+
+    // Sugestões ao apertar Tab
+    @Override
+    public List<String> onTabComplete(CommandSender sender, Command cmd, String alias, String[] args) {
+
+        // Só administradores têm subcomandos para sugerir
+        if (!sender.hasPermission("aeconomy.admin")) {
+            return Collections.emptyList();
+        }
+
+        // TreeSet: sem repetidos e já em ordem alfabética
+        Set<String> options = new TreeSet<>();
+
+        if (args.length == 1) {
+            // /saldo <Tab>
+            options.add("dar");
+            options.add("remover");
+            options.add("setar");
+
+        } else if (args.length == 2 && isAdminSubcommand(args[0])) {
+            // /saldo dar <Tab>  -> jogadores online
+            for (Player online : Bukkit.getOnlinePlayers()) {
+                options.add(online.getName());
+            }
+
+        } else if (args.length == 3 && isAdminSubcommand(args[0])) {
+            // /saldo dar Fulano <Tab>  -> moedas
+            options.add("coins");
+            options.addAll(economy.getCurrencies());
+        }
+
+        // Mantém só as sugestões que começam com o que a pessoa já digitou
+        List<String> completions = new ArrayList<>();
+        StringUtil.copyPartialMatches(args[args.length - 1], options, completions);
+        return completions;
+    }
+
+    private boolean isAdminSubcommand(String text) {
+        String sub = text.toLowerCase();
+        return sub.equals("dar") || sub.equals("remover") || sub.equals("setar");
     }
 
     // /saldo dar <jogador> <moeda> <valor>
@@ -64,8 +114,9 @@ public class SaldoCommand implements CommandExecutor {
         String currency = args[2].toLowerCase();
         economy.addBalance(target.getUniqueId(), currency, amount);
 
-        sender.sendMessage("§7Você deu §a" + amount + " " + currency + " §7para §f" + target.getName() + "§7.");
-        target.sendMessage("§7Você recebeu §a" + amount + " " + currency + "§7.");
+        String shown = MoneyFormat.format(amount);
+        sender.sendMessage("§7Você deu §a" + shown + " " + currency + " §7para §f" + target.getName() + "§7.");
+        target.sendMessage("§7Você recebeu §a" + shown + " " + currency + "§7.");
     }
 
     // /saldo remover <jogador> <moeda> <valor>
@@ -87,8 +138,9 @@ public class SaldoCommand implements CommandExecutor {
             return;
         }
 
-        sender.sendMessage("§7Você removeu §c" + amount + " " + currency + " §7de §f" + target.getName() + "§7.");
-        target.sendMessage("§7Foram removidos §c" + amount + " " + currency + " §7do seu saldo.");
+        String shown = MoneyFormat.format(amount);
+        sender.sendMessage("§7Você removeu §c" + shown + " " + currency + " §7de §f" + target.getName() + "§7.");
+        target.sendMessage("§7Foram removidos §c" + shown + " " + currency + " §7do seu saldo.");
     }
 
     // /saldo setar <jogador> <moeda> <valor>   (aceita 0)
@@ -109,8 +161,9 @@ public class SaldoCommand implements CommandExecutor {
             return;
         }
 
-        sender.sendMessage("§7Saldo de §f" + target.getName() + " §7em " + currency + " definido para §a" + amount + "§7.");
-        target.sendMessage("§7Seu saldo em " + currency + " agora é §a" + amount + "§7.");
+        String shown = MoneyFormat.format(amount);
+        sender.sendMessage("§7Saldo de §f" + target.getName() + " §7em " + currency + " definido para §a" + shown + "§7.");
+        target.sendMessage("§7Seu saldo em " + currency + " agora é §a" + shown + "§7.");
     }
 
     // Confere permissão, quantidade de argumentos e acha o jogador.
@@ -134,25 +187,18 @@ public class SaldoCommand implements CommandExecutor {
         return target;
     }
 
-    // Converte o texto em número. Devolve null (depois de avisar) se for inválido.
+    // Converte o texto em número (aceita 1500, 12.5, 1.5k, 2M, 3B...).
+    // Devolve null (depois de avisar) se for inválido.
     private Double parseAmount(CommandSender sender, String text, boolean allowZero) {
-        double amount;
-        try {
-            amount = Double.parseDouble(text);
-        } catch (NumberFormatException e) {
-            sender.sendMessage("§cO valor precisa ser um número. Use ponto para decimais: 12.5");
+        Double amount = MoneyFormat.parse(text);
+
+        if (amount == null) {
+            sender.sendMessage("§cValor inválido. Exemplos: 1500, 12.5, 1.5k, 2M, 3B");
             return null;
         }
 
-        if (Double.isNaN(amount) || Double.isInfinite(amount)) {
-            sender.sendMessage("§cValor inválido.");
-            return null;
-        }
-
-        if (amount < 0 || (amount == 0 && !allowZero)) {
-            sender.sendMessage(allowZero
-                    ? "§cO valor não pode ser negativo."
-                    : "§cO valor precisa ser maior que zero.");
+        if (amount == 0 && !allowZero) {
+            sender.sendMessage("§cO valor precisa ser maior que zero.");
             return null;
         }
         return amount;

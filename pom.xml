@@ -14,11 +14,15 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
-    <!-- Onde o Maven busca a API do Paper -->
+    <!-- Onde o Maven busca as dependências -->
     <repositories>
         <repository>
             <id>papermc</id>
             <url>https://repo.papermc.io/repository/maven-public/</url>
+        </repository>
+        <repository>
+            <id>placeholderapi</id>
+            <url>https://repo.extendedclip.com/releases/</url>
         </repository>
     </repositories>
 
@@ -29,6 +33,14 @@
             <!-- Use a mesma versão do seu servidor -->
             <version>1.21.10-R0.1-SNAPSHOT</version>
             <!-- provided = o servidor já fornece, não vai dentro do .jar -->
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>me.clip</groupId>
+            <artifactId>placeholderapi</artifactId>
+            <!-- Confira na wiki do PlaceholderAPI se existe uma versão mais nova -->
+            <version>2.11.6</version>
             <scope>provided</scope>
         </dependency>
     </dependencies>

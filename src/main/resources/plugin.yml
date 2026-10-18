@@ -3,16 +3,15 @@ version: 1.0.0
 main: io.github.airtonweb.aeconomy.aEconomy
 api-version: '1.21'
 author: airton-web
+softdepend: [PlaceholderAPI]
 description: Plugin de Multi Economias.
-libraries:
-  - org.xerial:sqlite-jdbc:3.49.1.0
 commands:
   saldo:
-    description: Show your balance or give money (admin).
+    description: Show your balance or manage balances (admin).
     aliases: [balance, bal]
     usage: "/saldo [dar|remover|setar <jogador> <moeda> <valor>]"
 
 permissions:
   aeconomy.admin:
-    description: Allows giving money to players
+    description: Allows managing player balances
     default: op

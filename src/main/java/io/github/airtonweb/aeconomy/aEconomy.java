@@ -34,7 +34,16 @@ public final class aEconomy extends JavaPlugin {
         getServer().getServicesManager().register(
                 Economy.class, economy, this, ServicePriority.Normal);
 
-        getCommand("saldo").setExecutor(new SaldoCommand(economy));
+        // Comando /saldo, com autocompletar
+        SaldoCommand saldoCommand = new SaldoCommand(economy);
+        getCommand("saldo").setExecutor(saldoCommand);
+        getCommand("saldo").setTabCompleter(saldoCommand);
+
+        // Só registra os placeholders se o PlaceholderAPI estiver instalado e ligado
+        if (Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI")) {
+            new AEconomyExpansion(economy, getPluginMeta().getVersion()).register();
+            getLogger().info("PlaceholderAPI encontrado: placeholders do aEconomy registrados.");
+        }
 
         Bukkit.getConsoleSender().sendMessage("§2[aEconomy] §aPlugin ativado com sucesso!");
         Bukkit.getConsoleSender().sendMessage("§2[aEconomy] §aVersão do Plugin: " + getPluginMeta().getVersion());
