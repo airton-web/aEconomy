@@ -6,10 +6,15 @@ import me.clip.placeholderapi.expansion.PlaceholderExpansion;
 import org.bukkit.OfflinePlayer;
 
 import java.util.Locale;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class AEconomyExpansion extends PlaceholderExpansion {
 
     private static final String SHORT_SUFFIX = "_short";
+
+    // "coins_short_2" -> grupo 1 = "coins", grupo 2 = "2"
+    private static final Pattern SHORT_DECIMALS = Pattern.compile("^(.+)_short_(\\d)$");
 
     private final Economy economy;
     private final String version;
@@ -48,21 +53,25 @@ public class AEconomyExpansion extends PlaceholderExpansion {
             return "";
         }
 
-        // %aeconomy_coins%       -> params = "coins"
-        // %aeconomy_coins_short% -> params = "coins_short"
-        String currency = params.toLowerCase();
-        boolean shortFormat = false;
+        String text = params.toLowerCase(Locale.ROOT);
 
-        if (currency.endsWith(SHORT_SUFFIX)) {
-            shortFormat = true;
-            currency = currency.substring(0, currency.length() - SHORT_SUFFIX.length());
+        // %aeconomy_coins_short_2% -> valor abreviado com 2 casas FIXAS
+        Matcher matcher = SHORT_DECIMALS.matcher(text);
+        if (matcher.matches()) {
+            double balance = economy.getBalance(player.getUniqueId(), matcher.group(1));
+            int decimals = Integer.parseInt(matcher.group(2));
+            return MoneyFormat.format(balance, decimals);
         }
 
-        double balance = economy.getBalance(player.getUniqueId(), currency);
-
-        if (shortFormat) {
+        // %aeconomy_coins_short% -> valor abreviado, sem zeros sobrando
+        if (text.endsWith(SHORT_SUFFIX)) {
+            String currency = text.substring(0, text.length() - SHORT_SUFFIX.length());
+            double balance = economy.getBalance(player.getUniqueId(), currency);
             return MoneyFormat.format(balance);
         }
+
+        // %aeconomy_coins% -> valor completo com 2 casas
+        double balance = economy.getBalance(player.getUniqueId(), text);
 
         // Locale.US garante ponto como separador decimal (12.50), não vírgula
         return String.format(Locale.US, "%.2f", balance);

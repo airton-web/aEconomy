@@ -25,6 +25,9 @@ public final class MoneyFormat {
             "N"    // nonilhão     10^30
     };
 
+    // Máximo de casas decimais que o formato fixo aceita
+    private static final int MAX_DECIMALS = 4;
+
     // Letras digitadas (em minúsculo) -> expoente de 10. Ex.: "k" -> 3, "m" -> 6
     private static final Map<String, Integer> EXPONENTS = new HashMap<>();
 
@@ -42,13 +45,23 @@ public final class MoneyFormat {
     private MoneyFormat() {
     }
 
-    // 1500 -> "1.5K", 2000000 -> "2M"
+    // Até 2 casas, SEM zeros sobrando: 1500 -> "1.5K", 2000000 -> "2M"
     public static String format(double value) {
+        return build(value, 2, true);
+    }
+
+    // Número FIXO de casas (0 a 4): format(1500, 2) -> "1.50K"
+    public static String format(double value, int decimals) {
+        int safeDecimals = Math.max(0, Math.min(MAX_DECIMALS, decimals));
+        return build(value, safeDecimals, false);
+    }
+
+    // O trabalho de verdade, usado pelos dois formatos acima
+    private static String build(double value, int decimals, boolean trimZeros) {
         if (Double.isNaN(value) || Double.isInfinite(value)) {
             return "0";
         }
 
-        String sign = value < 0 ? "-" : "";
         double abs = Math.abs(value);
 
         // Divide por mil até ficar menor que 1000, contando as divisões
@@ -58,14 +71,24 @@ public final class MoneyFormat {
             index++;
         }
 
-        // Arredonda para 2 casas. Se virou 1000 (ex.: 999.999K), sobe para a próxima letra
-        double rounded = Math.round(abs * 100) / 100.0;
+        // Arredonda para as casas pedidas (números gigantes passam direto)
+        double factor = Math.pow(10, decimals);
+        double rounded = abs >= 1e15 ? abs : Math.round(abs * factor) / factor;
+
+        // Se virou 1000 (ex.: 999.999K), sobe para a próxima letra
         if (rounded >= 1000 && index < SUFFIXES.length - 1) {
             rounded /= 1000;
             index++;
         }
 
-        return sign + trim(rounded) + SUFFIXES[index];
+        // Só coloca o "-" se sobrou algum valor (evita "-0")
+        String sign = (value < 0 && rounded > 0) ? "-" : "";
+
+        String number = trimZeros
+                ? trim(rounded)
+                : String.format(Locale.US, "%." + decimals + "f", rounded);
+
+        return sign + number + SUFFIXES[index];
     }
 
     // "1.5k" -> 1500.0. Devolve null se o texto for inválido.
