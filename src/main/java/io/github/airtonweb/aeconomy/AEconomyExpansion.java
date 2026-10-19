@@ -16,11 +16,20 @@ public class AEconomyExpansion extends PlaceholderExpansion {
     // "coins_short_2" -> grupo 1 = "coins", grupo 2 = "2"
     private static final Pattern SHORT_DECIMALS = Pattern.compile("^(.+)_short_(\\d)$");
 
+    // "top_coins_1_name" -> moeda = "coins", posição = "1", tipo = "name"
+    private static final Pattern TOP = Pattern.compile("^top_(.+)_(\\d{1,2})_(name|value)$");
+
+    // O que aparece quando não há ninguém naquela posição
+    private static final String EMPTY_NAME = "-";
+    private static final String EMPTY_VALUE = "0";
+
     private final Economy economy;
+    private final TopRanking ranking;
     private final String version;
 
-    public AEconomyExpansion(Economy economy, String version) {
+    public AEconomyExpansion(Economy economy, TopRanking ranking, String version) {
         this.economy = economy;
+        this.ranking = ranking;
         this.version = version;
     }
 
@@ -49,11 +58,19 @@ public class AEconomyExpansion extends PlaceholderExpansion {
     // Chamado sempre que alguém usa %aeconomy_<params>%
     @Override
     public String onRequest(OfflinePlayer player, String params) {
+        String text = params.toLowerCase(Locale.ROOT);
+
+        // %aeconomy_top_coins_1_name% / %aeconomy_top_coins_1_value%
+        // (o ranking não depende de um jogador específico)
+        Matcher top = TOP.matcher(text);
+        if (top.matches()) {
+            return topPlaceholder(top.group(1), Integer.parseInt(top.group(2)), top.group(3));
+        }
+
+        // Daqui para baixo, o placeholder é sobre o saldo de um jogador
         if (player == null) {
             return "";
         }
-
-        String text = params.toLowerCase(Locale.ROOT);
 
         // %aeconomy_coins_short_2% -> valor abreviado com 2 casas FIXAS
         Matcher matcher = SHORT_DECIMALS.matcher(text);
@@ -75,5 +92,15 @@ public class AEconomyExpansion extends PlaceholderExpansion {
 
         // Locale.US garante ponto como separador decimal (12.50), não vírgula
         return String.format(Locale.US, "%.2f", balance);
+    }
+
+    // Nome ou valor de uma posição do ranking
+    private String topPlaceholder(String currency, int position, String kind) {
+        TopRanking.Entry entry = ranking.getPosition(currency, position);
+
+        if (entry == null) {
+            return kind.equals("name") ? EMPTY_NAME : EMPTY_VALUE;
+        }
+        return kind.equals("name") ? entry.name() : MoneyFormat.format(entry.amount());
     }
 }

@@ -8,12 +8,14 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
 
 public class EconomyManager implements Economy {
 
-    // moeda -> (jogador -> saldo): a "cópia rápida" na memória
-    private final Map<String, Map<UUID, Double>> balances = new HashMap<>();
+    // moeda -> (jogador -> saldo): a "cópia rápida" na memória.
+    // ConcurrentHashMap: seguro para ler de outras threads (como a do TAB).
+    private final Map<String, Map<UUID, Double>> balances = new ConcurrentHashMap<>();
 
     private final Database database;
     private final Logger logger;
@@ -25,7 +27,9 @@ public class EconomyManager implements Economy {
 
     // Chamado ao ligar o plugin: traz os saldos do banco para a memória
     public void load() throws SQLException {
-        balances.putAll(database.loadAll());
+        for (Map.Entry<String, Map<UUID, Double>> entry : database.loadAll().entrySet()) {
+            balances.put(entry.getKey(), new ConcurrentHashMap<>(entry.getValue()));
+        }
     }
 
     @Override
@@ -40,7 +44,7 @@ public class EconomyManager implements Economy {
     @Override
     public void addBalance(UUID playerId, String currency, double amount) {
         Map<UUID, Double> currencyBalances =
-                balances.computeIfAbsent(currency, key -> new HashMap<>());
+                balances.computeIfAbsent(currency, key -> new ConcurrentHashMap<>());
 
         double newAmount = currencyBalances.getOrDefault(playerId, 0.0) + amount;
         currencyBalances.put(playerId, newAmount);
@@ -80,6 +84,16 @@ public class EconomyManager implements Economy {
         return new HashSet<>(balances.keySet());
     }
 
+    // Todos os saldos de uma moeda (jogador -> saldo), em uma CÓPIA.
+    // Usado pelo ranking. Não faz parte da API pública.
+    public Map<UUID, Double> getAllBalances(String currency) {
+        Map<UUID, Double> currencyBalances = balances.get(currency);
+        if (currencyBalances == null) {
+            return new HashMap<>();
+        }
+        return new HashMap<>(currencyBalances);
+    }
+
     // Número válido: nem NaN, nem infinito, nem negativo
     private boolean isValid(double amount) {
         return !Double.isNaN(amount) && !Double.isInfinite(amount) && amount >= 0;
@@ -94,7 +108,7 @@ public class EconomyManager implements Economy {
             return false;
         }
 
-        balances.computeIfAbsent(currency, key -> new HashMap<>()).put(playerId, newAmount);
+        balances.computeIfAbsent(currency, key -> new ConcurrentHashMap<>()).put(playerId, newAmount);
         return true;
     }
 }

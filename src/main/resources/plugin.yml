@@ -6,11 +6,14 @@ author: airton-web
 softdepend: [PlaceholderAPI]
 description: Plugin de Multi Economias.
 commands:
+  moneytop:
+    description: Show the richest players.
+    aliases: [ baltop, top ]
+    usage: /moneytop [moeda]
   saldo:
     description: Show your balance or manage balances (admin).
     aliases: [balance, bal]
     usage: "/saldo [dar|remover|setar <jogador> <moeda> <valor>]"
-
 permissions:
   aeconomy.admin:
     description: Allows managing player balances
